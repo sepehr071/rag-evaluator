@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}جمع‌آوری پاسخ‌ها از Dify - RAG Evaluator{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">جمع‌آوری پاسخ‌ها از Dify</h1>
+    </div>
+</div>
+
+<!-- Info Card -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card status-card bg-gradient-cyan text-white">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <span class="status-icon">&#x1F4C8;</span>
+                    جمع‌آوری پاسخ‌های چت‌بات
+                </h5>
+                <p class="card-text mb-0">
+                    با استفاده از این صفحه، می‌توانید پاسخ‌های چت‌بات Dify را برای سوالات موجود در فایل اکسل جمع‌آوری کنید.
+                    پس از اتمام، فایل حاوی پاسخ‌های Agent قابل دانلود خواهد بود.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Collection Form -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-gradient-blue text-white">
+                <h5 class="mb-0">پیکربندی و شروع جمع‌آوری</h5>
+            </div>
+            <div class="card-body">
+                <form id="collectForm">
+                    <!-- File Upload -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label for="datasetFile" class="form-label">فایل دیتاست (Excel)</label>
+                            <input type="file" class="form-control" id="datasetFile" accept=".xlsx,.xls">
+                            <small class="text-muted">فایل باید شامل ستون‌های «سوال» و «جواب مرجع» باشد</small>
+                        </div>
+                    </div>
+
+                    <!-- Dify API Configuration (Readonly) -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="alert alert-info mb-0">
+                                <strong>&#x128742; پیکربندی Dify API:</strong><br>
+                                URL: <code dir="ltr">{{ dify_api_url or 'تنظیم نشده' }}</code><br>
+                                API Key: <code dir="ltr">{{ dify_api_key or 'تنظیم نشده' }}</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Optional: Concurrent Requests -->
+                    <div class="row mb-3">
+                        <div class="col-12 col-md-6">
+                            <label for="concurrentRequests" class="form-label">تعداد درخواست‌های همزمان</label>
+                            <input type="number" class="form-control" id="concurrentRequests"
+                                   min="1" max="30" value="10">
+                            <small class="text-muted">تعداد درخواست‌هایی که به صورت همزمان ارسال می‌شوند</small>
+                        </div>
+                    </div>
+
+                    <!-- Start Button -->
+                    <div class="row">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary btn-lg" id="startBtn">
+                                <span class="btn-text">شروع جمع‌آوری</span>
+                                <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Alert Info -->
+                <div class="alert alert-info mt-3">
+                    <strong>&#x2139; توجه:</strong>
+                    فرآیند جمع‌آوری پاسخ‌ها ممکن است بسته به تعداد سوالات و سرعت پاسخگویی API چند دقیقه طول بکشد.
+                    لطفا صبور باشید و صفحه را نبندید.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Progress Section (Hidden Initially) -->
+<div class="row mb-4 d-none" id="progressSection">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-gradient-purple text-white">
+                <h5 class="mb-0">وضعیت جمع‌آوری</h5>
+            </div>
+            <div class="card-body">
+                <!-- Progress Bar -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span id="progressLabel">در حال پردازش...</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar" id="progressBar" role="progressbar"
+                             style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                            0%
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Details -->
+                <div class="row text-center">
+                    <div class="col-6 col-md-3">
+                        <div class="score-box">
+                            <div class="score-value" id="totalCount">0</div>
+                            <div class="score-label">کل سوالات</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="score-box">
+                            <div class="score-value text-success" id="completedCount">0</div>
+                            <div class="score-label">تکمیل شده</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="score-box">
+                            <div class="score-value text-warning" id="pendingCount">0</div>
+                            <div class="score-label">در انتظار</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="score-box">
+                            <div class="score-value text-danger" id="failedCount">0</div>
+                            <div class="score-label">ناموفق</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current Status Message -->
+                <div class="mt-3">
+                    <div id="statusMessage" class="alert alert-secondary mb-0">
+                        <span class="status-icon">&#x23F3;</span>
+                        <span id="statusText">آماده برای شروع...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Download Section (Hidden Initially) -->
+<div class="row mb-4 d-none" id="downloadSection">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-gradient-success text-white">
+                <h5 class="mb-0">دانلود نتایج</h5>
+            </div>
+            <div class="card-body text-center">
+                <div class="alert alert-success">
+                    <span class="status-icon">&#x2705;</span>
+                    جمع‌آوری پاسخ‌ها با موفقیت تکمیل شد!
+                </div>
+                <p class="mb-3">فایل حاوی پاسخ‌های چت‌بات آماده دانلود است.</p>
+                <a href="#" id="downloadLink" class="btn btn-success btn-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 8px;">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    دانلود فایل Excel
+                </a>
+                <button id="restartBtn" class="btn btn-outline-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px;">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/>
+                        <path d="M3 3v9h9"/>
+                    </svg>
+                    شروع مجدد
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Section (Hidden Initially) -->
+<div class="row mb-4 d-none" id="errorSection">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-gradient-danger text-white">
+                <h5 class="mb-0">خطا در فرآیند جمع‌آوری</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <span class="status-icon">&#x274C;</span>
+                    <strong>خطا:</strong> <span id="errorMessage"></span>
+                </div>
+                <button id="retryBtn" class="btn btn-primary">
+                    تلاش مجدد
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/collect.js') }}"></script>
+{% endblock %}

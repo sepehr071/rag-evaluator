@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block title %}داشبورد - RAG Evaluator{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">داشبورد ارزیابی RAG Chatbot</h1>
+    </div>
+</div>
+
+<!-- Status Cards -->
+<div class="row mb-4">
+    <div class="col-6 col-md-6">
+        <div class="card status-card {% if available_datasets %}bg-success{% else %}bg-danger{% endif %} text-white">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <span class="status-icon">{% if available_datasets %}&#x2705;{% else %}&#x274C;{% endif %}</span>
+                    فایل‌های داده
+                </h5>
+                {% if available_datasets %}
+                    <p class="card-text display-6">{{ available_datasets|length }}</p>
+                    <p class="card-text small">فایل آماده ارزیابی</p>
+                {% else %}
+                    <p class="card-text">فایلی در پوشه uploads یافت نشد</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-6">
+        <div class="card status-card bg-info text-white">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <span class="status-icon">&#x1F4C1;</span>
+                    ارزیابی‌های ذخیره شده
+                </h5>
+                <p class="card-text display-6">{{ saved_results|length }}</p>
+                <p class="card-text small">فایل نتیجه</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Evaluation Form -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">شروع ارزیابی جدید</h5>
+            </div>
+            <div class="card-body">
+                {% if available_datasets %}
+                    <form action="{{ url_for('evaluate') }}" method="POST" id="evaluateForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <div class="row align-items-end g-3">
+                            <div class="col-12 col-md-4">
+                                <label for="datasetSelect" class="form-label">فایل داده</label>
+                                <select class="form-select" id="datasetSelect" name="dataset">
+                                    {% for ds in available_datasets %}
+                                    <option value="{{ ds.filename }}" data-count="{{ ds.question_count }}">
+                                        {{ ds.filename }} ({{ ds.question_count }} سوال)
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label for="limit" class="form-label">تعداد سوالات (اختیاری)</label>
+                                <input type="number" class="form-control" id="limit" name="limit"
+                                       min="1" max="{{ available_datasets[0].question_count }}"
+                                       placeholder="همه سوالات">
+                                <small class="text-muted" id="limitHint">خالی بگذارید برای ارزیابی همه {{ available_datasets[0].question_count }} سوال</small>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <button type="submit" class="btn btn-primary btn-lg" id="startBtn">
+                                    <span class="btn-text">شروع ارزیابی</span>
+                                    <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Evaluation Progress (hidden initially) -->
+                    <div class="mt-3 d-none" id="evalProgressSection">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span id="evalProgressLabel">در حال ارزیابی...</span>
+                            <span id="evalProgressPercent">0%</span>
+                        </div>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar" id="evalProgressBar" role="progressbar"
+                                 style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                0%
+                            </div>
+                        </div>
+                        <div class="mt-2 text-muted" id="evalProgressDetail"></div>
+                    </div>
+
+                    <div class="alert alert-info mt-3" id="evalInfoAlert">
+                        <strong>توجه:</strong>
+                        ارزیابی ممکن است چند دقیقه طول بکشد.
+                        لطفا صبور باشید و صفحه را نبندید.
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <strong>توجه:</strong> هیچ فایل داده‌ای با ستون‌های مورد نیاز (سوال، جواب مرجع، Agent Response) در پوشه uploads یافت نشد.
+                        ابتدا از بخش <a href="{{ url_for('collect_page') }}">جمع‌آوری داده</a> استفاده کنید.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Results -->
+{% if saved_results %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">نتایج اخیر</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>تاریخ</th>
+                                <th>تعداد ارزیابی</th>
+                                <th>امتیاز کلی</th>
+                                <th>عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for result in saved_results[:5] %}
+                            <tr>
+                                <td>{{ result.timestamp|stamp }}</td>
+                                <td>{{ result.total_evaluated }} سوال</td>
+                                <td>
+                                    <span class="badge {% if result.overall_score >= 7 %}bg-success{% elif result.overall_score >= 5 %}bg-warning{% else %}bg-danger{% endif %}">
+                                        {{ result.overall_score }}/10
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('view_results', filename=result.filename) }}" class="btn btn-sm btn-outline-primary">مشاهده</a>
+                                    <a href="{{ url_for('export_results', filename=result.filename) }}" class="btn btn-sm btn-outline-secondary">خروجی CSV</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if saved_results|length > 5 %}
+                    <a href="{{ url_for('results_list') }}" class="btn btn-link">مشاهده همه نتایج...</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Update limit hint and max when dataset changes
+var datasetSelect = document.getElementById('datasetSelect');
+if (datasetSelect) {
+    datasetSelect.addEventListener('change', function() {
+        var count = this.selectedOptions[0].dataset.count;
+        var limitInput = document.getElementById('limit');
+        var limitHint = document.getElementById('limitHint');
+        limitInput.max = count;
+        limitHint.textContent = 'خالی بگذارید برای ارزیابی همه ' + count + ' سوال';
+    });
+}
+
+document.getElementById('evaluateForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    var btn = document.getElementById('startBtn');
+    var progressSection = document.getElementById('evalProgressSection');
+    var progressBar = document.getElementById('evalProgressBar');
+    var progressPercent = document.getElementById('evalProgressPercent');
+    var progressLabel = document.getElementById('evalProgressLabel');
+    var progressDetail = document.getElementById('evalProgressDetail');
+
+    var limit = document.getElementById('limit').value;
+    var selectedOption = datasetSelect ? datasetSelect.selectedOptions[0] : null;
+    var totalQuestions = selectedOption ? parseInt(selectedOption.dataset.count) : 0;
+    var questionCount = limit ? parseInt(limit) : totalQuestions;
+    var estimatedSeconds = questionCount * 2;
+    var estimatedMinutes = Math.ceil(estimatedSeconds / 60);
+
+    if (!confirm(
+        'شما در حال ارزیابی ' + questionCount + ' سوال هستید.\n' +
+        'زمان تخمینی: حدود ' + estimatedMinutes + ' دقیقه.\n\n' +
+        'آیا ادامه می‌دهید؟'
+    )) {
+        return;
+    }
+
+    btn.querySelector('.btn-text').textContent = 'در حال ارزیابی...';
+    btn.querySelector('.spinner-border').classList.remove('d-none');
+    btn.disabled = true;
+    var formData = new FormData();
+    if (limit) formData.append('limit', limit);
+    if (datasetSelect) formData.append('dataset', datasetSelect.value);
+
+    try {
+        var response = await fetch('{{ url_for("evaluate") }}', {
+            method: 'POST',
+            body: formData
+        });
+
+        var data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Evaluation failed');
+        }
+
+        // Show progress section
+        progressSection.classList.remove('d-none');
+        document.getElementById('evalInfoAlert').classList.add('d-none');
+
+        // Poll for progress
+        var jobId = data.job_id;
+        var pollTimer = setInterval(async function() {
+            try {
+                var pRes = await fetch('/evaluate/progress/' + jobId);
+                var pData = await pRes.json();
+
+                var pct = pData.progress || 0;
+                progressBar.style.width = pct + '%';
+                progressBar.textContent = pct + '%';
+                progressPercent.textContent = pct + '%';
+                progressDetail.textContent = (pData.evaluated || 0) + ' از ' + (pData.total || 0) + ' سوال ارزیابی شده';
+
+                if (pData.status === 'completed') {
+                    clearInterval(pollTimer);
+                    window.location.href = '{{ url_for("view_results", filename="PLACEHOLDER") }}'.replace('PLACEHOLDER', pData.result_filename);
+                } else if (pData.status === 'error') {
+                    clearInterval(pollTimer);
+                    progressLabel.textContent = 'خطا: ' + (pData.error || 'خطای ناشناخته');
+                    progressBar.classList.add('bg-danger');
+                    btn.querySelector('.btn-text').textContent = 'شروع ارزیابی';
+                    btn.querySelector('.spinner-border').classList.add('d-none');
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                // transient polling error, keep trying
+            }
+        }, 1000);
+
+    } catch (error) {
+        alert('خطا: ' + error.message);
+        btn.querySelector('.btn-text').textContent = 'شروع ارزیابی';
+        btn.querySelector('.spinner-border').classList.add('d-none');
+        btn.disabled = false;
+    }
+});
+</script>
+{% endblock %}

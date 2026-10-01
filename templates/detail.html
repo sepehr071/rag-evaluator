@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}ارزیابی سوال {{ position }} - سامانه ارزیابی{% endblock %}
+
+{% set human = result.human_evaluation %}
+{% set llm_avg = ((result.accuracy + result.completeness + result.relevance + result.faithfulness) / 4)|round(1) %}
+
+{% block content %}
+<!-- Progress header -->
+<div class="score-progress">
+    <a href="{{ url_for('view_results', filename=filename) }}" class="score-progress__back" title="بازگشت به فهرست">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </a>
+    <div class="score-progress__bar-wrap">
+        <div class="score-progress__meta">
+            <span>سوال <strong>{{ position }}</strong> از {{ total }}</span>
+            <span>{{ scored_count }} سوال ارزیابی شده</span>
+        </div>
+        <div class="score-progress__track">
+            <div class="score-progress__fill" style="width: {{ (scored_count / total * 100)|round(0) if total else 0 }}%"></div>
+        </div>
+    </div>
+</div>
+
+{% if human %}
+<div class="done-banner" id="doneBanner">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+    <span>شما به این سوال امتیاز <strong>{{ human.score }}</strong> از ۱۰ داده‌اید. می‌توانید آن را تغییر دهید.</span>
+</div>
+{% endif %}
+
+<!-- Reading area: question -> reference -> bot answer -->
+<article class="read-card read-card--question">
+    <div class="read-card__tag">سوال</div>
+    <p class="read-card__body">{{ question_data.question }}</p>
+</article>
+
+<article class="read-card read-card--truth">
+    <div class="read-card__tag">پاسخ درست</div>
+    <p class="read-card__body">{{ question_data.ground_truth }}</p>
+</article>
+
+<article class="read-card read-card--bot">
+    <div class="read-card__tag">پاسخ چت‌بات <span class="read-card__tag-hint">— این پاسخ را امتیاز دهید</span></div>
+    <p class="read-card__body">{{ question_data.agent_response }}</p>
+</article>
+
+<!-- Scoring panel -->
+<section class="score-panel" id="scorePanel">
+    <h2 class="score-panel__title">پاسخ چت‌بات چقدر خوب است؟</h2>
+    <p class="score-panel__hint">با مقایسه «پاسخ چت‌بات» و «پاسخ درست»، یک امتیاز از ۱ تا ۱۰ انتخاب کنید.</p>
+
+    <form id="humanEvalForm">
+        <input type="hidden" id="humanScore" name="score" value="{{ human.score if human else '' }}">
+
+        <div class="score-chips" id="scoreChips" role="radiogroup" aria-label="امتیاز از ۱ تا ۱۰">
+            {% for n in range(1, 11) %}
+            <button type="button" class="score-chip score-chip--z{{ 'lo' if n <= 3 else ('mid' if n <= 6 else ('hi' if n <= 8 else 'top')) }}{% if human and human.score == n %} is-selected{% endif %}"
+                    data-value="{{ n }}" role="radio" aria-checked="{{ 'true' if human and human.score == n else 'false' }}">{{ n }}</button>
+            {% endfor %}
+        </div>
+        <div class="score-zones" aria-hidden="true">
+            <span class="score-zones__z score-zones__z--lo">۱–۳ ضعیف</span>
+            <span class="score-zones__z score-zones__z--mid">۴–۶ متوسط</span>
+            <span class="score-zones__z score-zones__z--hi">۷–۸ خوب</span>
+            <span class="score-zones__z score-zones__z--top">۹–۱۰ عالی</span>
+        </div>
+
+        <div class="score-note">
+            <label for="humanComment">یادداشت (اختیاری)</label>
+            <textarea id="humanComment" name="comment" rows="2" placeholder="اگر نکته‌ای دارید بنویسید…">{{ human.comment if human else '' }}</textarea>
+        </div>
+
+        <div class="score-actions">
+            <button type="button" class="btn-save-next" id="saveNextBtn" disabled>
+                <span class="label">ذخیره و سوال بعدی</span>
+                <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+            </button>
+            <button type="button" class="btn-save-stay" id="saveStayBtn" disabled>فقط ذخیره</button>
+            <span id="saveStatus" class="score-status"></span>
+        </div>
+        <p class="score-kbd">میانبر: کلیدهای <kbd>۱</kbd>…<kbd>۹</kbd> و <kbd>۰</kbd> برای امتیاز، <kbd>Enter</kbd> برای ذخیره و بعدی</p>
+    </form>
+</section>
+
+<!-- AI opinion (optional, collapsed) -->
+<details class="ai-opinion">
+    <summary class="ai-opinion__summary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>
+        نظر هوش مصنوعی <span class="ai-opinion__avg">میانگین {{ llm_avg }}/۱۰</span>
+        <span class="ai-opinion__caret">برای دیدن باز کنید ▾</span>
+    </summary>
+    <div class="ai-opinion__body">
+        <p class="ai-opinion__disclaim">این امتیازها توسط هوش مصنوعی داده شده و فقط برای راهنمایی است؛ نظر نهایی با شماست.</p>
+        <div class="ai-metrics">
+            {% set metrics = [('دقت', result.accuracy), ('کامل بودن', result.completeness), ('مرتبط بودن', result.relevance), ('بدون خطا', result.faithfulness)] %}
+            {% for label, val in metrics %}
+            <div class="ai-metric">
+                <div class="ai-metric__val {{ 'is-hi' if val >= 7 else ('is-mid' if val >= 5 else 'is-lo') }}">{{ val }}</div>
+                <div class="ai-metric__label">{{ label }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% if result.explanation %}
+        <p class="ai-opinion__text">{{ result.explanation }}</p>
+        {% endif %}
+    </div>
+</details>
+
+<!-- Sequential nav -->
+<nav class="seq-nav">
+    {% if prev_id is not none %}
+    <a href="{{ url_for('view_detail', filename=filename, question_id=prev_id) }}" class="seq-nav__link">→ سوال قبلی</a>
+    {% else %}<span></span>{% endif %}
+    {% if next_id is not none %}
+    <a href="{{ url_for('view_detail', filename=filename, question_id=next_id) }}" class="seq-nav__link">سوال بعدی ←</a>
+    {% else %}<span></span>{% endif %}
+</nav>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const SAVE_URL = '{{ url_for("save_human_eval", filename=filename, question_id=result.id) }}';
+    const NEXT_UNSCORED = {{ next_unscored_id if next_unscored_id is not none else 'null' }};
+    const NEXT_SEQ = {{ next_id if next_id is not none else 'null' }};
+    const LIST_URL = '{{ url_for("view_results", filename=filename) }}';
+    function detailUrl(id) { return '{{ url_for("view_detail", filename=filename, question_id=0) }}'.replace(/0$/, id); }
+
+    const hidden = document.getElementById('humanScore');
+    const chips = Array.from(document.querySelectorAll('.score-chip'));
+    const saveNext = document.getElementById('saveNextBtn');
+    const saveStay = document.getElementById('saveStayBtn');
+    const status = document.getElementById('saveStatus');
+
+    function setScore(val) {
+        hidden.value = val;
+        chips.forEach(c => {
+            const on = parseInt(c.dataset.value, 10) === val;
+            c.classList.toggle('is-selected', on);
+            c.setAttribute('aria-checked', on ? 'true' : 'false');
+        });
+        saveNext.disabled = false;
+        saveStay.disabled = false;
+    }
+
+    chips.forEach(c => c.addEventListener('click', () => setScore(parseInt(c.dataset.value, 10))));
+
+    // Keyboard: 1-9 and 0(=10) pick score; Enter saves & next
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'TEXTAREA') {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doSave(true); }
+            return;
+        }
+        const map = {'0': 10, '۰': 10};
+        let val = map[e.key];
+        if (val === undefined && /^[1-9]$/.test(e.key)) val = parseInt(e.key, 10);
+        const fa = '۱۲۳۴۵۶۷۸۹'.indexOf(e.key);
+        if (val === undefined && fa >= 0) val = fa + 1;
+        if (val !== undefined) { e.preventDefault(); setScore(val); }
+        else if (e.key === 'Enter') { e.preventDefault(); if (hidden.value) doSave(true); }
+    });
+
+    async function doSave(goNext) {
+        const score = parseInt(hidden.value, 10);
+        if (!score || score < 1 || score > 10) {
+            status.innerHTML = '<span class="is-err">ابتدا یک امتیاز انتخاب کنید</span>';
+            return;
+        }
+        const btn = goNext ? saveNext : saveStay;
+        btn.disabled = true;
+        if (goNext) saveNext.querySelector('.spinner-border').classList.remove('d-none');
+        status.innerHTML = '';
+        try {
+            const res = await fetch(SAVE_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ score: score, comment: document.getElementById('humanComment').value })
+            });
+            const data = await res.json();
+            if (data.success) {
+                if (goNext) {
+                    const target = (NEXT_UNSCORED !== null) ? NEXT_UNSCORED : NEXT_SEQ;
+                    window.location.href = target !== null ? detailUrl(target) : LIST_URL;
+                } else {
+                    status.innerHTML = '<span class="is-ok">ذخیره شد ✓</span>';
+                    saveNext.disabled = false; saveStay.disabled = false;
+                }
+            } else {
+                status.innerHTML = '<span class="is-err">خطا: ' + (data.error || '') + '</span>';
+                saveNext.disabled = false; saveStay.disabled = false;
+            }
+        } catch (err) {
+            status.innerHTML = '<span class="is-err">خطا در ارتباط با سرور</span>';
+            saveNext.disabled = false; saveStay.disabled = false;
+        } finally {
+            saveNext.querySelector('.spinner-border').classList.add('d-none');
+        }
+    }
+
+    saveNext.addEventListener('click', () => doSave(true));
+    saveStay.addEventListener('click', () => doSave(false));
+})();
+</script>
+{% endblock %}

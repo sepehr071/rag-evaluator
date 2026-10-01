@@ -1,0 +1,29 @@
+<!doctype html>
+<!-- Hero banner for README: frames the real results-dashboard screenshot. Rendered by capture-screenshots.js -->
+<html><head><meta charset="utf-8">
+<style>
+  body { margin: 0; width: 1600px; height: 800px; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif;
+         background: #0d1220; color: #e8ebf4; display: grid; grid-template-columns: 520px 1fr; align-items: center; }
+  .copy { padding: 0 0 0 72px; }
+  h1 { font-size: 54px; line-height: 1.05; margin: 0 0 20px; letter-spacing: -0.02em; font-weight: 800; }
+  p { font-size: 21px; line-height: 1.5; color: #a9b1c6; margin: 0 0 28px; }
+  ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; font-size: 17px; color: #c8cee0; }
+  li::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 12px; background: var(--c); }
+  .shot { position: relative; height: 100%; }
+  .shot img { position: absolute; right: 56px; top: 88px; width: 1000px; border-radius: 14px;
+              box-shadow: 0 30px 80px -20px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.08); }
+  small { position: absolute; left: 72px; bottom: 28px; color: #6f7890; font-size: 14px; }
+</style></head>
+<body>
+  <div class="copy">
+    <h1>RAG Evaluator</h1>
+    <p>LLM-as-judge and human reviewers scoring the same chatbot answers, side by side.</p>
+    <ul>
+      <li style="--c:#8494ff">4-criteria judge with a strict JSON contract</li>
+      <li style="--c:#3cc68a">1&ndash;10 human scores on the same rows</li>
+      <li style="--c:#f0a940">Persian-first RTL dashboard, light &amp; dark</li>
+    </ul>
+  </div>
+  <div class="shot"><img src="../docs/images/results-dashboard.png" alt=""></div>
+  <small>Screenshot: real app UI, demo data</small>
+</body></html>

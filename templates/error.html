@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}خطا - RAG Evaluator{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="alert alert-danger" role="alert">
+            <h4 class="alert-heading">خطا!</h4>
+            <p>{{ error }}</p>
+            <hr>
+            <a href="{{ url_for('index') }}" class="btn btn-primary">بازگشت به داشبورد</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

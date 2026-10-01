@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}نتایج ارزیابی - سامانه ارزیابی{% endblock %}
+
+{% set total_q = data.results | length %}
+{% set pct = (scored_count / total_q * 100) | round(0) | int if total_q else 0 %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-12">
+        {% if session.role == 'admin' %}
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">داشبورد</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('results_list') }}">نتایج</a></li>
+                <li class="breadcrumb-item active">جزئیات</li>
+            </ol>
+        </nav>
+        {% endif %}
+        <h1>ارزیابی پاسخ‌های چت‌بات</h1>
+        <ul class="page-meta mb-3">
+            <li>تاریخ: <strong dir="ltr">{{ data.timestamp|stamp }}</strong></li>
+            {% if session.role == 'admin' %}<li>مدل داور: <strong dir="ltr">{{ data.model }}</strong></li>{% endif %}
+            <li><strong>{{ total_q }}</strong> سوال</li>
+        </ul>
+    </div>
+</div>
+
+<!-- Continue / progress hero (both roles) -->
+<div class="continue-hero">
+    <div class="continue-hero__top">
+        <span class="continue-hero__count"><strong>{{ scored_count }}</strong> از {{ total_q }} سوال ارزیابی شده</span>
+        <span class="continue-hero__pct">{{ pct }}٪ کامل</span>
+    </div>
+    <div class="continue-hero__track"><div class="continue-hero__fill" style="width: {{ pct }}%"></div></div>
+    {% if first_unscored_id is not none %}
+    <a href="{{ url_for('view_detail', filename=filename, question_id=first_unscored_id) }}" class="continue-hero__cta">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        {% if scored_count > 0 %}ادامه ارزیابی{% else %}شروع ارزیابی{% endif %}
+    </a>
+    {% else %}
+    <span class="continue-hero__done">✓ همه سوال‌ها ارزیابی شده‌اند. سپاسگزاریم!</span>
+    {% endif %}
+</div>
+
+{% if session.role == 'admin' %}
+<!-- ===== ADMIN: full analytics ===== -->
+{% if data.aggregates and not data.aggregates.error %}
+<div class="card">
+    <div class="card-header bg-primary text-white"><h5 class="mb-0">امتیازات کلی هوش مصنوعی</h5></div>
+    <div class="card-body">
+        {% macro ring(key, label, extra='') %}{% set v = data.aggregates[key].average %}
+            <div class="col"><div class="score-circle {{ extra }} {{ 'ring-hi' if v >= 7 else ('ring-mid' if v >= 5 else 'ring-lo') }}" style="--v: {{ v }}" role="img" aria-label="{{ label }}: {{ v }} از 10"><span class="score-value">{{ v }}</span><span class="score-out">از 10</span><span class="score-label">{{ label }}</span></div></div>
+        {% endmacro %}
+        <div class="row text-center align-items-center">
+            {{ ring('overall', 'میانگین کلی', 'overall') }}
+            {{ ring('accuracy', 'دقت') }}
+            {{ ring('completeness', 'کامل بودن') }}
+            {{ ring('relevance', 'مرتبط بودن') }}
+            {{ ring('faithfulness', 'بدون خطا') }}
+        </div>
+        <div class="agg-meta">
+            <span>ارزیابی موفق: <strong>{{ data.aggregates.total_evaluated }}</strong></span>
+            <span>تعداد خطا: <strong>{{ data.aggregates.total_errors }}</strong></span>
+            <span>بازه امتیاز کلی: <strong>{{ data.aggregates.overall.min }} تا {{ data.aggregates.overall.max }}</strong></span>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="mb-3">
+    <a href="{{ url_for('export_results', filename=filename) }}" class="btn btn-success">دانلود CSV</a>
+</div>
+
+<div class="card mb-4" id="filterCard">
+    <div class="card-header bg-info text-white"><h5 class="mb-0">فیلتر نتایج</h5></div>
+    <div class="card-body" id="filterCardBody">
+        <div class="row">
+            <div class="col-6 col-lg-2 mb-3"><label class="form-label">حداقل میانگین</label><input type="range" class="form-range" min="0" max="10" step="0.5" value="0" id="filterOverall"><div class="text-center"><span id="filterOverallValue">0</span></div></div>
+            <div class="col-6 col-lg-2 mb-3"><label class="form-label">حداقل دقت</label><input type="range" class="form-range" min="0" max="10" step="1" value="0" id="filterAccuracy"><div class="text-center"><span id="filterAccuracyValue">0</span></div></div>
+            <div class="col-6 col-lg-2 mb-3"><label class="form-label">حداقل کامل بودن</label><input type="range" class="form-range" min="0" max="10" step="1" value="0" id="filterCompleteness"><div class="text-center"><span id="filterCompletenessValue">0</span></div></div>
+            <div class="col-6 col-lg-2 mb-3"><label class="form-label">حداقل مرتبط بودن</label><input type="range" class="form-range" min="0" max="10" step="1" value="0" id="filterRelevance"><div class="text-center"><span id="filterRelevanceValue">0</span></div></div>
+            <div class="col-6 col-lg-2 mb-3"><label class="form-label">حداقل بدون خطا</label><input type="range" class="form-range" min="0" max="10" step="1" value="0" id="filterFaithfulness"><div class="text-center"><span id="filterFaithfulnessValue">0</span></div></div>
+            <div class="col-6 col-lg-2 mb-3"><label class="form-label">ارزیابی انسانی</label><select class="form-select" id="filterHumanEval"><option value="all">همه</option><option value="evaluated">ارزیابی شده</option><option value="not-evaluated">ارزیابی نشده</option></select></div>
+        </div>
+        <div class="d-flex align-items-center"><button class="btn btn-outline-secondary" id="resetFilters">پاک کردن</button><span class="me-3">نمایش: <strong id="visibleCount">0</strong> از <strong id="totalCount">0</strong></span></div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><h5 class="mb-0">جزئیات</h5></div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="resultsTable">
+                <thead><tr><th>#</th><th>سوال</th><th>دقت</th><th>کامل</th><th>مرتبط</th><th>بدون خطا</th><th>میانگین</th><th>امتیاز انسانی</th><th>عملیات</th></tr></thead>
+                <tbody>
+                    {% for result in data.results %}
+                    {% set avg = ((result.accuracy + result.completeness + result.relevance + result.faithfulness) / 4)|round(1) %}
+                    <tr class="{% if result.error %}table-danger{% endif %}" data-accuracy="{{ result.accuracy }}" data-completeness="{{ result.completeness }}" data-relevance="{{ result.relevance }}" data-faithfulness="{{ result.faithfulness }}" data-avg="{{ avg }}" data-human-evaluated="{{ 'true' if result.human_evaluation else 'false' }}">
+                        <td>{{ result.id + 1 }}</td>
+                        <td class="question-cell" data-label="سوال" title="{{ result.question }}">{{ result.question[:50] }}{% if result.question|length > 50 %}...{% endif %}</td>
+                        <td data-label="دقت"><span class="badge {{ 'bg-success' if result.accuracy >= 7 else ('bg-warning' if result.accuracy >= 5 else 'bg-danger') }}">{{ result.accuracy }}</span></td>
+                        <td data-label="کامل"><span class="badge {{ 'bg-success' if result.completeness >= 7 else ('bg-warning' if result.completeness >= 5 else 'bg-danger') }}">{{ result.completeness }}</span></td>
+                        <td data-label="مرتبط"><span class="badge {{ 'bg-success' if result.relevance >= 7 else ('bg-warning' if result.relevance >= 5 else 'bg-danger') }}">{{ result.relevance }}</span></td>
+                        <td data-label="بدون خطا"><span class="badge {{ 'bg-success' if result.faithfulness >= 7 else ('bg-warning' if result.faithfulness >= 5 else 'bg-danger') }}">{{ result.faithfulness }}</span></td>
+                        <td data-label="میانگین"><span class="badge {{ 'bg-success' if avg >= 7 else ('bg-warning' if avg >= 5 else 'bg-danger') }}">{{ avg }}</span></td>
+                        <td data-label="امتیاز انسانی">{% if result.human_evaluation %}{% set hs = result.human_evaluation.score %}<span class="badge {{ 'bg-success' if hs >= 7 else ('bg-warning' if hs >= 4 else 'bg-danger') }}">{{ hs }}</span>{% else %}<span class="badge bg-secondary">—</span>{% endif %}</td>
+                        <td data-label="عملیات"><a href="{{ url_for('view_detail', filename=filename, question_id=result.id) }}" class="btn btn-sm btn-outline-primary">{% if result.human_evaluation %}مشاهده{% else %}ارزیابی{% endif %}</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- ===== EXPERT: simple task list ===== -->
+<div class="task-filter" role="group" aria-label="فیلتر">
+    <button class="task-filter__btn is-active" data-filter="all">همه ({{ total_q }})</button>
+    <button class="task-filter__btn" data-filter="todo">در انتظار ({{ total_q - scored_count }})</button>
+    <button class="task-filter__btn" data-filter="done">ارزیابی‌شده ({{ scored_count }})</button>
+</div>
+
+<div class="task-list" id="taskList">
+    {% for result in data.results %}
+    {% set done = result.human_evaluation %}
+    <div class="task-row" data-status="{{ 'done' if done else 'todo' }}">
+        <span class="task-row__num">{{ result.id + 1 }}</span>
+        <span class="task-row__q">{{ result.question[:90] }}{% if result.question|length > 90 %}…{% endif %}</span>
+        {% if done %}
+        <span class="task-row__score" style="background: {{ 'var(--success)' if done.score >= 7 else ('var(--warning)' if done.score >= 4 else 'var(--danger)') }}">{{ done.score }}</span>
+        <span class="task-row__status task-row__status--done">✓ ثبت شد</span>
+        <a href="{{ url_for('view_detail', filename=filename, question_id=result.id) }}" class="task-row__go task-row__go--done">ویرایش</a>
+        {% else %}
+        <span class="task-row__status task-row__status--todo">● در انتظار</span>
+        <a href="{{ url_for('view_detail', filename=filename, question_id=result.id) }}" class="task-row__go task-row__go--todo">ارزیابی</a>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if session.role == 'admin' %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const ids = ['Overall','Accuracy','Completeness','Relevance','Faithfulness'];
+    const rows = document.querySelectorAll('#resultsTable tbody tr');
+    const humanEval = document.getElementById('filterHumanEval');
+    const visibleCount = document.getElementById('visibleCount');
+    const totalCount = document.getElementById('totalCount');
+    totalCount.textContent = rows.length; visibleCount.textContent = rows.length;
+    function apply() {
+        const mins = {}; ids.forEach(k => mins[k] = parseFloat(document.getElementById('filter'+k).value));
+        const he = humanEval.value; let vis = 0;
+        rows.forEach(row => {
+            let show = parseFloat(row.dataset.avg) >= mins.Overall &&
+                parseFloat(row.dataset.accuracy) >= mins.Accuracy &&
+                parseFloat(row.dataset.completeness) >= mins.Completeness &&
+                parseFloat(row.dataset.relevance) >= mins.Relevance &&
+                parseFloat(row.dataset.faithfulness) >= mins.Faithfulness;
+            const ev = row.dataset.humanEvaluated === 'true';
+            if (he === 'evaluated') show = show && ev; else if (he === 'not-evaluated') show = show && !ev;
+            row.style.display = show ? '' : 'none'; if (show) vis++;
+        });
+        visibleCount.textContent = vis;
+    }
+    ids.forEach(k => { const el = document.getElementById('filter'+k); el.addEventListener('input', () => { document.getElementById('filter'+k+'Value').textContent = el.value; apply(); }); });
+    humanEval.addEventListener('change', apply);
+    document.getElementById('resetFilters').addEventListener('click', () => {
+        ids.forEach(k => { document.getElementById('filter'+k).value = 0; document.getElementById('filter'+k+'Value').textContent = '0'; });
+        humanEval.value = 'all'; apply();
+    });
+});
+</script>
+{% else %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const btns = document.querySelectorAll('.task-filter__btn');
+    const rows = document.querySelectorAll('#taskList .task-row');
+    btns.forEach(b => b.addEventListener('click', () => {
+        btns.forEach(x => x.classList.remove('is-active'));
+        b.classList.add('is-active');
+        const f = b.dataset.filter;
+        rows.forEach(r => { r.style.display = (f === 'all' || r.dataset.status === f) ? '' : 'none'; });
+    }));
+});
+</script>
+{% endif %}
+{% endblock %}

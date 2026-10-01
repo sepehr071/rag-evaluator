@@ -1,0 +1,132 @@
+{
+  "timestamp": "20260928_101000",
+  "model": "demo (no LLM call)",
+  "dataset_file": "sample_qa.csv",
+  "total_questions": 8,
+  "aggregates": {
+    "accuracy": {
+      "average": 5.62,
+      "min": 0,
+      "max": 10
+    },
+    "completeness": {
+      "average": 5.62,
+      "min": 0,
+      "max": 10
+    },
+    "relevance": {
+      "average": 8.25,
+      "min": 2.0,
+      "max": 10
+    },
+    "faithfulness": {
+      "average": 6.25,
+      "min": 1.0,
+      "max": 10
+    },
+    "overall": {
+      "average": 6.44,
+      "min": 1.25,
+      "max": 10.0
+    },
+    "total_evaluated": 8,
+    "total_errors": 0
+  },
+  "results": [
+    {
+      "accuracy": 10,
+      "completeness": 10,
+      "relevance": 10,
+      "faithfulness": 10,
+      "explanation": "پاسخ دقیقاً با جواب مرجع مطابقت دارد و هیچ اطلاعات اضافه‌ای ندارد.",
+      "raw_response": "{\"accuracy\": 10, \"completeness\": 10, \"relevance\": 10, \"faithfulness\": 10, \"explanation\": \"پاسخ دقیقاً با جواب مرجع مطابقت دارد و هیچ اطلاعات اضافه‌ای ندارد.\"}",
+      "id": 0,
+      "question": "ساعت کاری رسمی شرکت Acme چیست؟",
+      "human_evaluation": {
+        "score": 10,
+        "comment": "کامل و دقیق.",
+        "evaluated_at": "2026-09-28 10:12:00"
+      }
+    },
+    {
+      "accuracy": 2.0,
+      "completeness": 6.0,
+      "relevance": 9.0,
+      "faithfulness": 3.0,
+      "explanation": "تعداد روزهای مرخصی (۳۰ روز) با جواب مرجع (۲۶ روز) مغایرت دارد؛ پاسخ مرتبط است اما عدد نادرست ارائه شده.",
+      "raw_response": "{\"accuracy\": 2, \"completeness\": 6, \"relevance\": 9, \"faithfulness\": 3, \"explanation\": \"تعداد روزهای مرخصی (۳۰ روز) با جواب مرجع (۲۶ روز) مغایرت دارد؛ پاسخ مرتبط است اما عدد نادرست ارائه شده.\"}",
+      "id": 1,
+      "question": "هر کارمند در سال چند روز مرخصی استحقاقی دارد؟",
+      "human_evaluation": {
+        "score": 3,
+        "comment": "عدد مرخصی اشتباه است؛ خطای جدی.",
+        "evaluated_at": "2026-09-28 10:14:30"
+      }
+    },
+    {
+      "accuracy": 8.0,
+      "completeness": 6.0,
+      "relevance": 10,
+      "faithfulness": 9.0,
+      "explanation": "مراحل ثبت در سامانه و تایید سرپرست درست است، اما شرط «حداقل دو روز قبل» ذکر نشده است.",
+      "raw_response": "{\"accuracy\": 8, \"completeness\": 6, \"relevance\": 10, \"faithfulness\": 9, \"explanation\": \"مراحل ثبت در سامانه و تایید سرپرست درست است، اما شرط «حداقل دو روز قبل» ذکر نشده است.\"}",
+      "id": 2,
+      "question": "برای دورکاری باید چه کار کنم؟"
+    },
+    {
+      "accuracy": 5.0,
+      "completeness": 2.0,
+      "relevance": 7.0,
+      "faithfulness": 8.0,
+      "explanation": "پاسخ طفره‌آمیز است: مهلت ۱۴ روزه و زمان بازپرداخت را نمی‌گوید و کاربر را به واحد مالی ارجاع می‌دهد.",
+      "raw_response": "{\"accuracy\": 5, \"completeness\": 2, \"relevance\": 7, \"faithfulness\": 8, \"explanation\": \"پاسخ طفره‌آمیز است: مهلت ۱۴ روزه و زمان بازپرداخت را نمی‌گوید و کاربر را به واحد مالی ارجاع می‌دهد.\"}",
+      "id": 3,
+      "question": "هزینه سفر کاری چگونه بازپرداخت می‌شود؟",
+      "human_evaluation": {
+        "score": 4,
+        "comment": "",
+        "evaluated_at": "2026-09-28 10:17:05"
+      }
+    },
+    {
+      "accuracy": 9.0,
+      "completeness": 10,
+      "relevance": 10,
+      "faithfulness": 7.0,
+      "explanation": "مدت دوره آزمایشی درست است؛ جمله مربوط به «تمدید یا استخدام رسمی» در جواب مرجع نیامده و کمی فراتر از منبع است.",
+      "raw_response": "{\"accuracy\": 9, \"completeness\": 10, \"relevance\": 10, \"faithfulness\": 7, \"explanation\": \"مدت دوره آزمایشی درست است؛ جمله مربوط به «تمدید یا استخدام رسمی» در جواب مرجع نیامده و کمی فراتر از منبع است.\"}",
+      "id": 4,
+      "question": "دوره آزمایشی کارمندان جدید چند ماه است؟"
+    },
+    {
+      "accuracy": 1.0,
+      "completeness": 0,
+      "relevance": 2.0,
+      "faithfulness": 2.0,
+      "explanation": "پاسخ به سؤال ربطی ندارد: به جای گزارش فوری به فناوری اطلاعات، درباره ضمانت دستگاه صحبت می‌کند.",
+      "raw_response": "{\"accuracy\": 1, \"completeness\": 0, \"relevance\": 2, \"faithfulness\": 2, \"explanation\": \"پاسخ به سؤال ربطی ندارد: به جای گزارش فوری به فناوری اطلاعات، درباره ضمانت دستگاه صحبت می‌کند.\"}",
+      "id": 5,
+      "question": "اگر لپ‌تاپ شرکتی گم شود چه باید کرد؟"
+    },
+    {
+      "accuracy": 10,
+      "completeness": 10,
+      "relevance": 10,
+      "faithfulness": 10,
+      "explanation": "سقف بودجه آموزشی و شرط تایید سرپرست هر دو به‌درستی بیان شده‌اند.",
+      "raw_response": "{\"accuracy\": 10, \"completeness\": 10, \"relevance\": 10, \"faithfulness\": 10, \"explanation\": \"سقف بودجه آموزشی و شرط تایید سرپرست هر دو به‌درستی بیان شده‌اند.\"}",
+      "id": 6,
+      "question": "آیا شرکت هزینه آموزش و دوره‌های تخصصی را پرداخت می‌کند؟"
+    },
+    {
+      "accuracy": 0,
+      "completeness": 1.0,
+      "relevance": 8.0,
+      "faithfulness": 1.0,
+      "explanation": "The response contradicts the reference: dress code is business casual, not formal suits.",
+      "raw_response": "{\"accuracy\": 0, \"completeness\": 1, \"relevance\": 8, \"faithfulness\": 1, \"explanation\": \"The response contradicts the reference: dress code is business casual, not formal suits.\"}",
+      "id": 7,
+      "question": "What is the dress code at Acme?"
+    }
+  ]
+}

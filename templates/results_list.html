@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}فهرست ارزیابی‌ها - سامانه ارزیابی{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-12">
+        <h1>{% if session.role == 'admin' %}همه نتایج ارزیابی{% else %}ارزیابی‌های شما{% endif %}</h1>
+        {% if session.role != 'admin' %}
+        <p class="text-muted">یک مجموعه را باز کنید و به پاسخ‌های چت‌بات امتیاز دهید.</p>
+        {% endif %}
+    </div>
+</div>
+
+{% if results %}
+<div class="task-list">
+    {% for result in results %}
+    <div class="task-row">
+        <span class="task-row__num">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        </span>
+        <span class="task-row__q">
+            <strong>{{ result.timestamp|stamp }}</strong><br>
+            <span class="text-muted">{{ result.total_evaluated }} سوال{% if session.role == 'admin' %} · میانگین هوش مصنوعی: {{ result.overall_score }}/۱۰{% endif %}</span>
+        </span>
+        <a href="{{ url_for('view_results', filename=result.filename) }}" class="task-row__go task-row__go--todo">
+            {% if session.role == 'admin' %}مشاهده{% else %}باز کردن و ارزیابی{% endif %}
+        </a>
+        {% if session.role == 'admin' %}
+        <a href="{{ url_for('export_results', filename=result.filename) }}" class="task-row__go task-row__go--done">CSV</a>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    {% if session.role == 'admin' %}
+    هنوز ارزیابی انجام نشده است. از <a href="{{ url_for('index') }}">داشبورد</a> یک ارزیابی جدید شروع کنید.
+    {% else %}
+    هنوز ارزیابی‌ای برای شما آماده نشده است. لطفاً با مدیر تماس بگیرید.
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}
